@@ -39,7 +39,7 @@ local StartBtn = Instance.new("TextButton")
 local StopBtn = Instance.new("TextButton")
 
 ScreenGui.Name = "CountSpammer_200"
-ScreenGui.Parent = game.CoreGui
+ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
 MainFrame.Parent = ScreenGui
@@ -58,7 +58,7 @@ Title.Parent = TopBar
 Title.Size = UDim2.new(1, -70, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.Text = "Count 1-200"
-Title.TextColor3 = Color3.fromRGB(0, 255, 127) -- Neon Green
+Title.TextColor3 = Color3.fromRGB(0, 255, 127)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
@@ -90,13 +90,22 @@ StopBtn.Text = "PARAR"
 StopBtn.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
 StopBtn.TextColor3 = Color3.new(1, 1, 1)
 
--- Lógica de Envio
+-- Lógica de Envio Atualizada
 local function enviar(txt)
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local channel = TextChatService.TextChannels.RBXGeneral
-        if channel then channel:SendAsync(txt) end
+    -- Tenta o sistema novo (TextChatService)
+    local chatChannel = TextChatService:FindFirstChild("TextChannels") and TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+    if chatChannel then
+        chatChannel:SendAsync(txt)
     else
-        ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(txt, "All")
+        -- Fallback para o sistema antigo (Legacy Chat)
+        local sayMessage = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+        if sayMessage then
+            sayMessage:FireServer(txt, "All")
+        else
+            -- Se for o TextChatService mas o canal não for RBXGeneral
+            -- Tenta enviar via input simulado (último recurso)
+            TextChatService.TextChannels.RBXGeneral:SendAsync(txt)
+        end
     end
 end
 
@@ -104,10 +113,10 @@ StartBtn.MouseButton1Click:Connect(function()
     if rodando then return end
     rodando = true
     StartBtn.Text = "CONTANDO..."
-    for _, msg in pairs(numeros) do
+    for _, msg in ipairs(numeros) do
         if not rodando then break end
         enviar(msg)
-        task.wait(0.18) -- Delay seguro para o filtro do Roblox
+        task.wait(0.3) -- Aumentado levemente para evitar o filtro de "Slow mode" do Roblox
     end
     rodando = false
     StartBtn.Text = "ATIVAR CONTAGEM"
